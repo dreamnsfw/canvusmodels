@@ -17,6 +17,7 @@ import {
   Box,
   BarChart3,
   Shield,
+  ScanEye,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -27,6 +28,7 @@ const dashboardItems = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/create", label: "Create", icon: Sparkles },
   { href: "/dashboard/gallery", label: "Gallery", icon: Image },
+  { href: "/dashboard/synthid-remove", label: "SynthID Remover", icon: ScanEye },
   { href: "/dashboard/billing", label: "Billing", icon: CreditCard },
   { href: "/dashboard/activity", label: "Activity", icon: Activity },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
