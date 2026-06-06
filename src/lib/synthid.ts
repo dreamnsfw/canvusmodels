@@ -1,3 +1,5 @@
+const FAL_API_BASE = "https://fal.run";
+
 interface SynthIDRemoveParams {
   imageUrl?: string;
   imageData?: string;
@@ -24,56 +26,32 @@ async function uploadToImgbb(base64: string): Promise<string> {
   return data.data.url;
 }
 
-async function callReplicateSDXL(imageUrl: string, strength: number): Promise<string> {
-  const token = process.env.REPLICATE_API_TOKEN!;
+async function callFalSDXL(imageUrl: string, strength: number): Promise<string> {
+  const key = process.env.FAL_API_KEY;
+  if (!key) throw new Error("FAL_API_KEY is not configured");
 
-  const response = await fetch("https://api.replicate.com/v1/predictions", {
+  const response = await fetch(`${FAL_API_BASE}/fal-ai/stable-diffusion-xl/img2img`, {
     method: "POST",
     headers: {
-      Authorization: `Token ${token}`,
+      Authorization: `Key ${key}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      version: "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
-      input: {
-        image: imageUrl,
-        strength,
-        prompt: "",
-        num_inference_steps: 50,
-        guidance_scale: 7.5,
-        scheduler: "DDIM",
-        num_outputs: 1,
-      },
+      image_url: imageUrl,
+      strength,
+      prompt: "",
+      num_inference_steps: 50,
+      guidance_scale: 7.5,
     }),
   });
 
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(`Replicate API error: ${response.status} ${text}`);
+    throw new Error(`Fal.ai API error: ${response.status} ${text}`);
   }
 
-  const prediction = await response.json();
-  const predictionId = prediction.id;
-
-  const maxAttempts = 60;
-  for (let i = 0; i < maxAttempts; i++) {
-    await new Promise((r) => setTimeout(r, 2000));
-
-    const statusRes = await fetch(
-      `https://api.replicate.com/v1/predictions/${predictionId}`,
-      { headers: { Authorization: `Token ${token}` } }
-    );
-    const statusData = await statusRes.json();
-
-    if (statusData.status === "succeeded") {
-      return statusData.output?.[0] ?? statusData.output ?? "";
-    }
-    if (statusData.status === "failed") {
-      throw new Error(`Replicate prediction failed: ${statusData.error}`);
-    }
-  }
-
-  throw new Error("SynthID removal timed out after 2 minutes");
+  const result = await response.json();
+  return result.image?.url ?? result.output?.[0] ?? result.images?.[0]?.url ?? "";
 }
 
 export async function removeSynthID(params: SynthIDRemoveParams): Promise<SynthIDRemoveResult> {
@@ -88,6 +66,6 @@ export async function removeSynthID(params: SynthIDRemoveParams): Promise<SynthI
     throw new Error("Either imageUrl or imageData is required");
   }
 
-  const outputUrl = await callReplicateSDXL(imageUrl, strength);
+  const outputUrl = await callFalSDXL(imageUrl, strength);
   return { outputUrl };
 }
